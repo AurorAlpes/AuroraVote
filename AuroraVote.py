@@ -135,8 +135,8 @@ async def create_vote(interaction: discord.Interaction, question: str, reponses:
 
         # Si le temps est supérieur à 0, commencez le compte à rebours
         if temps > 0:
-            for remaining in range(temps, 0, -1):
-                await asyncio.sleep(1)
+            for remaining in range(temps, 0, -10):  # Mettre à jour toutes les 10 secondes
+                await asyncio.sleep(10)  # Attendre 10 secondes avant la prochaine mise à jour
                 total_voters = len(vote_config[question]["votes"])
                 time_left_message = f"Votants : {total_voters} | Temps restant : {remaining} secondes"
                 await status_message.edit(content=time_left_message)
@@ -148,6 +148,7 @@ async def create_vote(interaction: discord.Interaction, question: str, reponses:
 
     else:
         await interaction.response.send_message("Vous n'avez pas les permissions nécessaires pour créer un vote.", ephemeral=True)
+
 
 
 async def afficher_resultats(channel, question):
