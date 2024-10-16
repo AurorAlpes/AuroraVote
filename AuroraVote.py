@@ -82,15 +82,17 @@ class VoteButton(discord.ui.Button):
         await interaction.response.send_message(f"Votre vote pour '{self.reponse}' a été pris en compte.", ephemeral=True)
 
 @bot.tree.command(name="createauroravote", description="Créer un vote Aurora avec des boutons pour voter.")
-@app_commands.describe(question="La question du vote", reponses="Les réponses possibles, séparées par des virgules", roles="Les rôles autorisés à voter, séparées par des virgules", poids="Les poids des rôles autorisés, séparés par des virgules", temps="Temps du vote en secondes")
+@app_commands.describe(question="La question du vote", reponses="Les réponses possibles, séparées par des virgules", roles="Les rôles autorisés à voter, séparées par des virgules", poids="Les poids des rôles autorisés, séparées par des virgules", temps="Temps du vote en secondes")
 async def create_vote(interaction: discord.Interaction, question: str, reponses: str, roles: str, poids: str, temps: int):
     if interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("Création du vote en cours...", ephemeral=True)  # Réponse initiale
+
         reponses_list = reponses.split(",")
         roles_list = [role.strip() for role in roles.split(",")]
         poids_list = [int(p.strip()) for p in poids.split(",")]
 
         if len(roles_list) != len(poids_list):
-            await interaction.response.send_message("Le nombre de rôles et de poids doit correspondre.", ephemeral=True)
+            await interaction.followup.send("Le nombre de rôles et de poids doit correspondre.", ephemeral=True)
             return
 
         vote_config[question] = {
@@ -114,10 +116,10 @@ async def create_vote(interaction: discord.Interaction, question: str, reponses:
                 if role_obj:
                     vote_config[question]["poids"][role_obj.name] = poids_value
                 else:
-                    await interaction.response.send_message(f"Le rôle mentionné n'existe pas : {role_name}", ephemeral=True)
+                    await interaction.followup.send(f"Le rôle mentionné n'existe pas : {role_name}", ephemeral=True)
                     return
             else:
-                await interaction.response.send_message(f"Format de mention invalide pour le rôle : {role_name}", ephemeral=True)
+                await interaction.followup.send(f"Format de mention invalide pour le rôle : {role_name}", ephemeral=True)
                 return
 
         view = discord.ui.View()
@@ -129,7 +131,7 @@ async def create_vote(interaction: discord.Interaction, question: str, reponses:
             button = VoteButton(label=reponse.strip(), reponse=reponse.strip(), question=question, status_message=status_message)
             view.add_item(button)
 
-        await interaction.response.send_message(f"Vote créé : **{question}**. Cliquez sur un bouton pour voter.", view=view)
+        await interaction.followup.send(f"Vote créé : **{question}**. Cliquez sur un bouton pour voter.", view=view)
 
         # Si le temps est supérieur à 0, commencez le compte à rebours
         if temps > 0:
@@ -146,6 +148,7 @@ async def create_vote(interaction: discord.Interaction, question: str, reponses:
 
     else:
         await interaction.response.send_message("Vous n'avez pas les permissions nécessaires pour créer un vote.", ephemeral=True)
+
 
 async def afficher_resultats(channel, question):
     if question not in votes or question not in vote_open:
