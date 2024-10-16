@@ -69,8 +69,8 @@ class VoteButton(discord.ui.Button):
         # Mettre à jour le message d'état
         total_voters = len(config["votes"])
         time_remaining = self.status_message.content.split('|')[1].strip()  # Récupérer le temps restant
-        self.status_message.content = f"Votants : {total_voters} | {time_remaining}"
-        await self.status_message.edit(content=self.status_message.content)
+        new_content = f"Votants : {total_voters} | {time_remaining}"
+        await self.status_message.edit(content=new_content)
 
         # Envoyer la clé en privé au votant
         try:
@@ -129,7 +129,7 @@ async def create_vote(interaction: discord.Interaction, question: str, reponses:
             button = VoteButton(label=reponse.strip(), reponse=reponse.strip(), question=question, status_message=status_message)
             view.add_item(button)
 
-        await interaction.response.send_message(f"Vote créé : **{question}**. Cliquez sur un bouton pour voter.", view=view)
+        await interaction.response.send_message(f"Vote créé : **{question}**. Cliquez sur un bouton pour voter.", ephemeral=True)
 
         # Si le temps est supérieur à 0, commencez le compte à rebours
         if temps > 0:
@@ -173,13 +173,6 @@ async def afficher_resultats(channel, question):
         if votes_count > 0:
             results[reponse] += poids / votes_count
 
-    # **Normalisation des résultats** pour atteindre 100% si certains groupes n'ont pas voté
-    total_score = sum(results.values())
-    
-    if total_score < 100 and total_score > 0:  # Eviter une division par zéro
-        scaling_factor = 100 / total_score
-        results = {reponse: score * scaling_factor for reponse, score in results.items()}
-
     # Afficher les résultats
     result_message = "\n".join(f"{reponse}: {score:.2f}%" for reponse, score in results.items())
     await channel.send(f"Résultats du vote pour **'{question}'** :\n{result_message}")
@@ -199,38 +192,9 @@ async def afficher_resultats(channel, question):
         # Créer une liste de tuples (clé, vote) et les mélanger
         keys_votes = list(vote_keys[question].items())
         random.shuffle(keys_votes)  # Mélanger la liste des clés et des votes
-
+        
         for key, vote in keys_votes:
-            f.write(f"Clé: {key} - Vote: {vote}\n")
-
-    # Envoyer les fichiers dans le salon du vote
-    if os.path.exists(participants_file_path):
-        await channel.send(file=discord.File(participants_file_path))
-    else:
-        await channel.send("Erreur : le fichier des participants n'a pas été généré.")
-
-    if os.path.exists(keys_file_path):
-        await channel.send(file=discord.File(keys_file_path))
-    else:
-        await channel.send("Erreur : le fichier des clés et des votes n'a pas été généré.")
-
-
-@bot.tree.command(name="closeauroravote", description="Fermer un vote Aurora et afficher les résultats.")
-async def close_vote(interaction: discord.Interaction, question: str):
-    if interaction.user.guild_permissions.administrator:
-        if question in vote_open and vote_open[question]:
-            vote_open[question] = False
-            await afficher_resultats(interaction.channel, question)
-        else:
-            await interaction.response.send_message("Le vote n'est pas ouvert ou n'existe pas.", ephemeral=True)
-    else:
-        await interaction.response.send_message("Vous n'avez pas les permissions nécessaires pour fermer un vote.", ephemeral=True)
-
-@bot.event
-async def on_ready():
-    print(f"Bot {bot.user} est connecté.")
-    await bot.tree.sync()  # Synchroniser les commandes avec Discord
-    print("Commandes synchronisées.")
+            f.write(f"{key}: {vote}\n")
 
 # Démarrer le bot avec le token
 keep_alive()
